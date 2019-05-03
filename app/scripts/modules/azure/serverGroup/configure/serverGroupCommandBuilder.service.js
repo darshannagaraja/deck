@@ -5,11 +5,15 @@ const angular = require('angular');
 import { NameUtils } from '@spinnaker/core';
 
 module.exports = angular
-  .module('spinnaker.azure.serverGroupCommandBuilder.service', [require('../../image/image.reader').name])
+  .module('spinnaker.azure.serverGroupCommandBuilder.service', [
+    require('../../image/image.reader').name,
+    require('../serverGroup.transformer').name,
+  ])
   .factory('azureServerGroupCommandBuilder', [
     '$q',
     'azureImageReader',
-    function($q, azureImageReader) {
+    'azureServerGroupTransformer',
+    function($q, azureImageReader, azureServerGroupTransformer) {
       function buildNewServerGroupCommand(application, defaults) {
         defaults = defaults || {};
 
@@ -34,6 +38,9 @@ module.exports = angular
               sku: {
                 capacity: 1,
               },
+              zonesEnabled: false,
+              zones: [],
+              instanceTags: {},
               selectedProvider: 'azure',
               viewState: {
                 instanceProfile: 'custom',
@@ -47,6 +54,7 @@ module.exports = angular
                 networkSettingsConfigured: false,
                 securityGroupsConfigured: false,
               },
+              enableInboundNAT: false,
             };
           });
       }
@@ -87,6 +95,8 @@ module.exports = angular
             desired: serverGroup.capacity.desired,
           },
           tags: [],
+          instanceTags: serverGroup.instanceTags,
+          instanceType: serverGroup.sku.name,
           selectedProvider: 'azure',
           source: {
             account: serverGroup.account,
@@ -103,7 +113,19 @@ module.exports = angular
             mode: mode,
             disableStrategySelection: true,
           },
+          enableInboundNAT: serverGroup.enableInboundNAT,
         };
+
+        if (typeof serverGroup.customScriptsSettings !== 'undefined') {
+          command.customScriptsSettings = {};
+          command.customScriptsSettings.commandToExecute = serverGroup.customScriptsSettings.commandToExecute;
+          if (
+            typeof serverGroup.customScriptsSettings.fileUris !== 'undefined' &&
+            serverGroup.customScriptsSettings.fileUris != ''
+          ) {
+            azureServerGroupTransformer.parseCustomScriptsSettings(serverGroup, command);
+          }
+        }
 
         return $q.when(command);
       }
@@ -124,6 +146,8 @@ module.exports = angular
             useSimpleCapacity: true,
             mode: 'editPipeline',
             submitButtonLabel: 'Done',
+            instanceProfile: originalCluster.viewState.instanceProfile,
+            instanceTypeDetails: originalCluster.viewState.instanceTypeDetails,
           };
 
           var viewOverrides = {
@@ -131,6 +155,9 @@ module.exports = angular
             credentials: pipelineCluster.account,
             viewState: viewState,
           };
+          if (originalCluster.viewState.instanceTypeDetails) {
+            viewOverrides.instanceType = originalCluster.viewState.instanceTypeDetails.name;
+          }
 
           pipelineCluster.strategy = pipelineCluster.strategy || '';
 

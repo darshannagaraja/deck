@@ -9,6 +9,7 @@ import { Application } from 'core/application/application.model';
 import { CopyToClipboard } from 'core/utils';
 import { StageExecutionDetails } from 'core/pipeline/details/StageExecutionDetails';
 import { ExecutionStatus } from 'core/pipeline/status/ExecutionStatus';
+import { ParametersAndArtifacts } from 'core/pipeline/status/ParametersAndArtifacts';
 import { IExecution, IRestartDetails, IPipeline } from 'core/domain';
 import { IExecutionViewState, IPipelineGraphNode } from 'core/pipeline/config/graph/pipelineGraph.service';
 import { OrchestratedItemRunningTime } from './OrchestratedItemRunningTime';
@@ -30,16 +31,20 @@ import './execution.less';
 export interface IExecutionProps {
   application: Application;
   execution: IExecution;
+  pipelineConfig: IPipeline;
   showDurations?: boolean;
   standalone?: boolean;
   title?: string | JSX.Element;
   dataSourceKey?: string;
   showAccountLabels?: boolean;
   onRerun?: (execution: IExecution, config: IPipeline) => void;
+  cancelHelpText?: string;
+  cancelConfirmationText?: string;
 }
 
 export interface IExecutionState {
   showingDetails: boolean;
+  showingParams: boolean;
   pipelinesUrl: string;
   viewState: IExecutionViewState;
   sortFilter: ISortFilter;
@@ -50,6 +55,7 @@ export interface IExecutionState {
 export class Execution extends React.Component<IExecutionProps, IExecutionState> {
   public static defaultProps: Partial<IExecutionProps> = {
     dataSourceKey: 'executions',
+    cancelHelpText: 'Cancel execution',
   };
 
   private stateChangeSuccessSubscription: Subscription;
@@ -57,7 +63,7 @@ export class Execution extends React.Component<IExecutionProps, IExecutionState>
 
   constructor(props: IExecutionProps) {
     super(props);
-    const { execution } = this.props;
+    const { execution, standalone } = this.props;
     const { $stateParams } = ReactInjector;
 
     const initialViewState = {
@@ -72,6 +78,7 @@ export class Execution extends React.Component<IExecutionProps, IExecutionState>
 
     this.state = {
       showingDetails: this.invalidateShowingDetails(props),
+      showingParams: standalone,
       pipelinesUrl: [SETTINGS.gateUrl, 'pipelines/'].join('/'),
       viewState: initialViewState,
       sortFilter: ExecutionState.filterModel.asFilterModel.sortFilter,
@@ -145,18 +152,18 @@ export class Execution extends React.Component<IExecutionProps, IExecutionState>
   }
 
   public cancelExecution(): void {
+    const { application, execution, cancelConfirmationText } = this.props;
     const { executionService } = ReactInjector;
     const hasDeployStage =
-      this.props.execution.stages &&
-      this.props.execution.stages.some(stage => stage.type === 'deploy' || stage.type === 'cloneServerGroup');
+      execution.stages && execution.stages.some(stage => stage.type === 'deploy' || stage.type === 'cloneServerGroup');
     CancelModal.confirm({
-      header: `Really stop execution of ${this.props.execution.name}?`,
-      buttonText: `Stop running ${this.props.execution.name}`,
-      body: hasDeployStage
-        ? '<b>Note:</b> Any deployments that have begun will continue and need to be cleaned up manually.'
-        : null,
-      submitMethod: (reason, force) =>
-        executionService.cancelExecution(this.props.application, this.props.execution.id, force, reason),
+      header: `Really stop execution of ${execution.name}?`,
+      buttonText: `Stop running ${execution.name}`,
+      body:
+        hasDeployStage && !cancelConfirmationText
+          ? '*Note:* Any deployments that have begun will continue and need to be cleaned up manually.'
+          : cancelConfirmationText,
+      submitMethod: (reason, force) => executionService.cancelExecution(application, execution.id, force, reason),
     });
   }
 
@@ -247,8 +254,22 @@ export class Execution extends React.Component<IExecutionProps, IExecutionState>
     ReactGA.event({ category: 'Pipeline', action: 'Permalink clicked' });
   };
 
+  private handleToggleDetails = (): void => {
+    ReactGA.event({ category: 'Pipeline', action: 'Execution details toggled (Details link)' });
+    this.toggleDetails();
+  };
+
   public render() {
-    const { application, execution, showAccountLabels, showDurations, standalone, title } = this.props;
+    const {
+      application,
+      execution,
+      showAccountLabels,
+      showDurations,
+      standalone,
+      title,
+      cancelHelpText,
+      pipelineConfig,
+    } = this.props;
     const { pipelinesUrl, restartDetails, showingDetails, sortFilter, viewState } = this.state;
 
     const accountLabels = this.props.execution.deploymentTargets.map(account => (
@@ -294,12 +315,7 @@ export class Execution extends React.Component<IExecutionProps, IExecutionState>
               {execution.name}
             </h4>
           )}
-          <ExecutionStatus
-            execution={execution}
-            toggleDetails={this.toggleDetails}
-            showingDetails={showingDetails}
-            standalone={standalone}
-          />
+          <ExecutionStatus execution={execution} showingDetails={showingDetails} standalone={standalone} />
           <div className="execution-bar">
             <div className="stages">
               {executionMarkers}
@@ -369,14 +385,32 @@ export class Execution extends React.Component<IExecutionProps, IExecutionState>
               </span>
             )}
             {execution.isActive && (
-              <Tooltip value="Cancel execution">
+              <Tooltip value={cancelHelpText}>
                 <button className="link" onClick={this.handleCancelClick}>
                   <i className="far fa-times-circle" />
                 </button>
               </Tooltip>
             )}
           </div>
+
+          <ParametersAndArtifacts
+            execution={execution}
+            expandParamsOnInit={standalone}
+            pipelineConfig={pipelineConfig}
+          />
+
+          {!standalone && (
+            <div className="execution-details-button">
+              <a className="clickable" onClick={this.handleToggleDetails}>
+                <span
+                  className={`small glyphicon ${showingDetails ? 'glyphicon-chevron-down' : 'glyphicon-chevron-right'}`}
+                />
+                Execution Details
+              </a>
+            </div>
+          )}
         </div>
+
         {showingDetails && (
           <div className="execution-graph">
             <PipelineGraph execution={execution} onNodeClick={this.handleNodeClick} viewState={viewState} />

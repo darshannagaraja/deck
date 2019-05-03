@@ -1,41 +1,49 @@
 import * as React from 'react';
+import * as classNames from 'classnames';
 
 import { IPipelineTemplate } from 'core/pipeline/config/templates/PipelineTemplateReader';
+import { IPipelineTemplateV2 } from 'core/domain/IPipelineTemplateV2';
 import { SETTINGS } from 'core/config/settings';
 import { Spinner } from 'core/widgets/spinners/Spinner';
 
 import './TemplateDescription.less';
 
 export interface ITemplateDescriptionProps {
-  template: IPipelineTemplate;
+  template: IPipelineTemplate | IPipelineTemplateV2;
   loading: boolean;
   loadingError: boolean;
 }
 
 export class TemplateDescription extends React.Component<ITemplateDescriptionProps> {
+  private isV1Template(template: IPipelineTemplate | IPipelineTemplateV2): template is IPipelineTemplate {
+    return template.schema === '1';
+  }
+
   public render() {
+    const { loading, loadingError, template } = this.props;
+
     return (
-      <div className="col-md-12 template-description">
-        {this.props.loading && (
+      <div className={classNames('col-md-12', 'template-description', { 'template-description--loading': loading })}>
+        {loading && (
           <div className="spinner">
             <Spinner size="small" />
           </div>
         )}
-        {this.props.template && (
+        {template && (
           <div className="alert alert-info">
-            <strong>{this.props.template.metadata.name}</strong>
-            {this.props.template.selfLink && (
+            <strong>{template.metadata.name}</strong>
+            {this.isV1Template(template) && template.selfLink && (
               <p className="small">
-                <a href={this.buildTemplateResolutionLink(this.props.template.selfLink)} target="_blank">
-                  {this.props.template.selfLink}
+                <a href={this.buildTemplateResolutionLink(template.selfLink)} target="_blank">
+                  {template.selfLink}
                 </a>
               </p>
             )}
-            {this.props.template.metadata.owner && <p className="small">{this.props.template.metadata.owner}</p>}
-            <p className="small">{this.props.template.metadata.description || 'No template description provided.'}</p>
+            {template.metadata.owner && <p className="small">{template.metadata.owner}</p>}
+            <p className="small">{template.metadata.description || 'No template description provided.'}</p>
           </div>
         )}
-        {this.props.loadingError && (
+        {loadingError && (
           <div className="alert alert-danger">
             <p>There was an error loading the template.</p>
           </div>

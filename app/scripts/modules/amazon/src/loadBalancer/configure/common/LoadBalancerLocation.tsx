@@ -300,7 +300,7 @@ export class LoadBalancerLocation extends React.Component<ILoadBalancerLocationP
               <div className="col-md-7">
                 <AccountSelectInput
                   value={values.credentials}
-                  onChange={evt => this.accountUpdated(evt.target.value)}
+                  onChange={(evt: any) => this.accountUpdated(evt.target.value)}
                   accounts={accounts}
                   provider="aws"
                 />
@@ -380,7 +380,9 @@ export class LoadBalancerLocation extends React.Component<ILoadBalancerLocationP
                     <Field
                       name="isInternal"
                       onChange={this.internalFlagChanged}
-                      render={({ field }: FieldProps) => <input type="checkbox" checked={!!field.value} />}
+                      render={({ field: { value, ...field } }: FieldProps) => (
+                        <input type="checkbox" {...field} checked={!!value} />
+                      )}
                     />
                     Create an internal load balancer
                   </label>

@@ -3,14 +3,7 @@
 const angular = require('angular');
 import _ from 'lodash';
 
-import {
-  AccountService,
-  InfrastructureCaches,
-  LoadBalancerWriter,
-  NameUtils,
-  NetworkReader,
-  TaskMonitor,
-} from '@spinnaker/core';
+import { AccountService, LoadBalancerWriter, NameUtils, NetworkReader, TaskMonitor } from '@spinnaker/core';
 
 module.exports = angular
   .module('spinnaker.azure.loadBalancer.create.controller', [
@@ -27,6 +20,8 @@ module.exports = angular
     'isNew',
     function($scope, $uibModalInstance, $state, azureLoadBalancerTransformer, application, loadBalancer, isNew) {
       var ctrl = this;
+
+      $scope.regions = [];
 
       $scope.pages = {
         location: require('./createLoadBalancerProperties.html'),
@@ -159,7 +154,6 @@ module.exports = angular
         $scope.loadBalancer.vnet = null;
         $scope.loadBalancer.vnetResourceGroup = null;
         ctrl.selectedVnets = [];
-        InfrastructureCaches.clearCache('networks');
 
         NetworkReader.listNetworks().then(function(vnets) {
           if (vnets.azure) {

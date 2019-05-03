@@ -5,6 +5,7 @@ const angular = require('angular');
 import { CloudProviderRegistry, DeploymentStrategyRegistry } from '@spinnaker/core';
 
 import './help/azure.help';
+import './logo/azure.logo.less';
 
 // load all templates into the $templateCache
 var templates = require.context('./', true, /\.html$/);
@@ -33,17 +34,13 @@ module.exports = angular
     require('./securityGroup/securityGroup.transformer').name,
     require('./securityGroup/securityGroup.reader').name,
     require('./image/image.reader').name,
-    require('./cache/cacheConfigurer.service').name,
     require('./validation/applicationName.validator').name,
   ])
   .config(function() {
     CloudProviderRegistry.registerProvider('azure', {
       name: 'Azure',
       logo: {
-        path: require('./logo_azure.png'),
-      },
-      cache: {
-        configurer: 'azureCacheConfigurer',
+        path: require('./logo/logo_azure.png'),
       },
       image: {
         reader: 'azureImageReader',
@@ -80,4 +77,4 @@ module.exports = angular
     });
   });
 
-DeploymentStrategyRegistry.registerProvider('azure', []);
+DeploymentStrategyRegistry.registerProvider('azure', ['redblack']);

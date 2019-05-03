@@ -193,7 +193,7 @@ export class TitusServerGroupConfigurationService {
       const removed: string[] = xor(currentGroupNames, matchedGroupNames);
       command.securityGroups = matchedGroups.map(g => g.id);
       if (removed.length) {
-        command.dirty.securityGroups = removed;
+        command.viewState.dirty.securityGroups = removed;
       }
     }
     command.backingData.filtered.securityGroups = newRegionalSecurityGroups.sort((a, b) => {
@@ -271,11 +271,9 @@ export class TitusServerGroupConfigurationService {
   }
 
   public refreshLoadBalancers(command: ITitusServerGroupCommand) {
-    return this.cacheInitializer.refreshCache('loadBalancers').then(() => {
-      return this.loadBalancerReader.listLoadBalancers('aws').then(loadBalancers => {
-        command.backingData.loadBalancers = loadBalancers;
-        this.configureLoadBalancerOptions(command);
-      });
+    return this.loadBalancerReader.listLoadBalancers('aws').then(loadBalancers => {
+      command.backingData.loadBalancers = loadBalancers;
+      this.configureLoadBalancerOptions(command);
     });
   }
 }

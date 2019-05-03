@@ -12,11 +12,18 @@ import {
 } from '@spinnaker/core';
 
 import { KubernetesV2DeployManifestConfigCtrl } from './deployManifestConfig.controller';
+import { MANIFEST_BIND_ARTIFACTS_SELECTOR_REACT } from './ManifestBindArtifactsSelector';
+import { MANIFEST_DEPLOYMENT_OPTIONS } from './ManifestDeploymentOptions';
 import { DeployStatus } from './react/DeployStatus';
+import { deployManifestValidators } from './deployManifest.validator';
 
 export const KUBERNETES_DEPLOY_MANIFEST_STAGE = 'spinnaker.kubernetes.v2.pipeline.stage.deployManifestStage';
 
-module(KUBERNETES_DEPLOY_MANIFEST_STAGE, [EXECUTION_ARTIFACT_TAB])
+module(KUBERNETES_DEPLOY_MANIFEST_STAGE, [
+  EXECUTION_ARTIFACT_TAB,
+  MANIFEST_BIND_ARTIFACTS_SELECTOR_REACT,
+  MANIFEST_DEPLOYMENT_OPTIONS,
+])
   .config(() => {
     // Todo: replace feature flag with proper versioned provider mechanism once available.
     if (SETTINGS.feature.versionedProviders) {
@@ -31,7 +38,7 @@ module(KUBERNETES_DEPLOY_MANIFEST_STAGE, [EXECUTION_ARTIFACT_TAB])
         executionDetailsSections: [DeployStatus, ExecutionDetailsTasks, ExecutionArtifactTab],
         producesArtifacts: true,
         defaultTimeoutMs: 30 * 60 * 1000, // 30 minutes
-        validators: [],
+        validators: deployManifestValidators(),
         accountExtractor: (stage: IStage): string => (stage.account ? stage.account : ''),
         configAccountExtractor: (stage: any): string[] => (stage.account ? [stage.account] : []),
         artifactExtractor: ExpectedArtifactService.accumulateArtifacts(['manifestArtifactId', 'requiredArtifactIds']),

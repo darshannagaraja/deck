@@ -5,11 +5,25 @@ import * as ReactDOM from 'react-dom';
 
 import { Registry } from 'core/registry';
 import { SETTINGS } from 'core/config/settings';
+import { TRIGGER_ARTIFACT_CONSTRAINT_SELECTOR_REACT } from './artifacts';
 
 const angular = require('angular');
 
+const removeUnusedExpectedArtifacts = function(pipeline) {
+  // remove unused expected artifacts from the pipeline
+  const artifacts = pipeline.expectedArtifacts;
+  artifacts.forEach(artifact => {
+    if (!pipeline.triggers.find(t => t.expectedArtifactIds && t.expectedArtifactIds.includes(artifact.id))) {
+      pipeline.expectedArtifacts.splice(pipeline.expectedArtifacts.indexOf(artifact), 1);
+      if (pipeline.expectedArtifacts.length === 0) {
+        delete pipeline.expectedArtifacts;
+      }
+    }
+  });
+};
+
 module.exports = angular
-  .module('spinnaker.core.pipeline.config.trigger.triggerDirective', [])
+  .module('spinnaker.core.pipeline.config.trigger.triggerDirective', [TRIGGER_ARTIFACT_CONSTRAINT_SELECTOR_REACT])
   .directive('trigger', function() {
     return {
       restrict: 'E',
@@ -42,6 +56,43 @@ module.exports = angular
       this.removeTrigger = function(trigger) {
         var triggerIndex = $scope.pipeline.triggers.indexOf(trigger);
         $scope.pipeline.triggers.splice(triggerIndex, 1);
+        if (this.checkFeatureFlag('artifactsRewrite')) {
+          removeUnusedExpectedArtifacts($scope.pipeline);
+        }
+      };
+
+      this.checkFeatureFlag = function(flag) {
+        return !!SETTINGS.feature[flag];
+      };
+
+      this.changeExpectedArtifacts = function(expectedArtifacts, trigger) {
+        $scope.$applyAsync(() => {
+          trigger.expectedArtifactIds = expectedArtifacts;
+          removeUnusedExpectedArtifacts($scope.pipeline);
+        });
+      };
+
+      this.defineExpectedArtifact = function(expectedArtifact) {
+        $scope.$applyAsync(() => {
+          const expectedArtifacts = $scope.pipeline.expectedArtifacts;
+          if (expectedArtifacts) {
+            let editingArtifact = expectedArtifacts.findIndex(artifact => artifact.id === expectedArtifact.id);
+            if (editingArtifact >= 0) {
+              $scope.pipeline.expectedArtifacts[editingArtifact] = expectedArtifact;
+            } else {
+              expectedArtifacts.push(expectedArtifact);
+            }
+          } else {
+            $scope.pipeline.expectedArtifacts = [expectedArtifact];
+          }
+
+          const expectedArtifactIds = $scope.trigger.expectedArtifactIds;
+          if (expectedArtifactIds && !expectedArtifactIds.includes(expectedArtifact.id)) {
+            expectedArtifactIds.push(expectedArtifact.id);
+          } else {
+            $scope.trigger.expectedArtifactIds = [expectedArtifact.id];
+          }
+        });
       };
 
       this.loadTrigger = () => {
@@ -67,9 +118,18 @@ module.exports = angular
             if (config.component) {
               // react
               const TriggerConfig = config.component;
-              const props = { fieldUpdated: $scope.fieldUpdated, trigger: $scope.trigger };
+              const renderTrigger = props =>
+                ReactDOM.render(React.createElement(TriggerConfig, props), triggerBodyNode);
 
-              ReactDOM.render(React.createElement(TriggerConfig, props), triggerBodyNode);
+              const props = {
+                fieldUpdated: () => {
+                  $scope.fieldUpdated();
+                  renderTrigger(props);
+                },
+                trigger: $scope.trigger,
+              };
+
+              renderTrigger(props);
             } else if (config.templateUrl) {
               // angular
               const template = $templateCache.get(config.templateUrl);

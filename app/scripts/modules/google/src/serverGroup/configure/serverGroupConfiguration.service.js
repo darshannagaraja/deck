@@ -106,24 +106,16 @@ module.exports = angular
             persistentDiskTypes: $q.when(angular.copy(persistentDiskTypes)),
             authScopes: $q.when(angular.copy(authScopes)),
             healthChecks: gceHealthCheckReader.listHealthChecks(),
+            accounts: AccountService.listAccounts('gce'),
           })
           .then(function(backingData) {
-            let loadBalancerReloader = $q.when(null);
             let securityGroupReloader = $q.when(null);
             let networkReloader = $q.when(null);
             let healthCheckReloader = $q.when(null);
-            backingData.accounts = _.keys(backingData.credentialsKeyedByAccount);
             backingData.filtered = {};
             command.backingData = backingData;
             configureImages(command);
 
-            if (command.loadBalancers && command.loadBalancers.length) {
-              // Verify all load balancers are accounted for; otherwise, try refreshing load balancers cache.
-              const loadBalancerNames = _.map(getLoadBalancers(command), 'name');
-              if (_.intersection(loadBalancerNames, command.loadBalancers).length < command.loadBalancers.length) {
-                loadBalancerReloader = refreshLoadBalancers(command, true);
-              }
-            }
             if (command.securityGroups && command.securityGroups.length) {
               // Verify all firewalls are accounted for; otherwise, try refreshing firewalls cache.
               const securityGroupIds = _.map(getSecurityGroups(command), 'id');
@@ -147,19 +139,17 @@ module.exports = angular
               if (
                 !_.chain(healthChecks)
                   .map('selfLink')
-                  .includes(command.autoHealingPolicy.healthCheck)
+                  .includes(command.autoHealingPolicy.healthCheckUrl)
                   .value()
               ) {
                 healthCheckReloader = refreshHealthChecks(command, true);
               }
             }
 
-            return $q
-              .all([loadBalancerReloader, securityGroupReloader, networkReloader, healthCheckReloader])
-              .then(() => {
-                gceTagManager.register(command);
-                attachEventHandlers(command);
-              });
+            return $q.all([securityGroupReloader, networkReloader, healthCheckReloader]).then(() => {
+              gceTagManager.register(command);
+              attachEventHandlers(command);
+            });
           });
       }
 
@@ -416,7 +406,7 @@ module.exports = angular
           _.has(command, 'autoHealingPolicy.healthCheck') &&
           !_.chain(filteredData.healthChecks)
             .map('selfLink')
-            .includes(command.autoHealingPolicy.healthCheck)
+            .includes(command.autoHealingPolicy.healthCheckUrl)
             .value()
         ) {
           delete command.autoHealingPolicy.healthCheck;
@@ -503,13 +493,11 @@ module.exports = angular
       }
 
       function refreshLoadBalancers(command, skipCommandReconfiguration) {
-        return cacheInitializer.refreshCache('loadBalancers').then(function() {
-          return loadBalancerReader.listLoadBalancers('gce').then(function(loadBalancers) {
-            command.backingData.loadBalancers = loadBalancers;
-            if (!skipCommandReconfiguration) {
-              configureLoadBalancerOptions(command);
-            }
-          });
+        return loadBalancerReader.listLoadBalancers('gce').then(function(loadBalancers) {
+          command.backingData.loadBalancers = loadBalancers;
+          if (!skipCommandReconfiguration) {
+            configureLoadBalancerOptions(command);
+          }
         });
       }
 
@@ -781,16 +769,16 @@ module.exports = angular
       }
 
       return {
-        configureCommand: configureCommand,
-        configureInstanceTypes: configureInstanceTypes,
-        configureImages: configureImages,
-        configureZones: configureZones,
-        configureSubnets: configureSubnets,
-        configureLoadBalancerOptions: configureLoadBalancerOptions,
-        refreshLoadBalancers: refreshLoadBalancers,
-        refreshSecurityGroups: refreshSecurityGroups,
-        refreshInstanceTypes: refreshInstanceTypes,
-        refreshHealthChecks: refreshHealthChecks,
+        configureCommand,
+        configureInstanceTypes,
+        configureImages,
+        configureZones,
+        configureSubnets,
+        configureLoadBalancerOptions,
+        refreshLoadBalancers,
+        refreshSecurityGroups,
+        refreshInstanceTypes,
+        refreshHealthChecks,
       };
     },
   ]);

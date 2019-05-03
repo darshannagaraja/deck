@@ -1,5 +1,5 @@
 <page-navigator scrollable-container="[ui-view]">
-  <page-section key="concurrent" label="Concurrent Executions" visible="!pipeline.strategy">
+  <page-section key="concurrent" label="Execution Options" visible="!pipeline.strategy">
     <div class="row">
       <div class="col-md-11 col-md-offset-1">
         <div class="checkbox">
@@ -23,7 +23,7 @@
     label="Expected Artifacts"
     badge="pipeline.expectedArtifacts.length"
     no-wrapper="true"
-    visible="triggersCtrl.checkFeatureFlag('artifacts')"
+    visible="!triggersCtrl.checkFeatureFlag('artifactsRewrite') && triggersCtrl.checkFeatureFlag('artifacts')"
   >
     <div class="row">
       <p class="col-md-12">

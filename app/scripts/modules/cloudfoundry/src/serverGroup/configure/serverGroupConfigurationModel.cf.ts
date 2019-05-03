@@ -1,97 +1,69 @@
-import { IServerGroupCommand } from '@spinnaker/core';
-
+import { IServerGroupCommand, IArtifact } from '@spinnaker/core';
 import { ICloudFoundryEnvVar } from 'cloudfoundry/domain';
 
 export interface ICloudFoundryCreateServerGroupCommand extends IServerGroupCommand {
-  artifact: ICloudFoundryBinarySource;
-  destination?: ICloudFoundryDestination;
-  delayBeforeDisableSec?: number;
-  manifest: ICloudFoundryManifestSource;
-  maxRemainingAsgs?: number;
+  // clone server group model
+  account?: string;
+  delayBeforeScaleDownSec?: number;
   rollback?: boolean;
   source?: ICloudFoundrySource;
-  startApplication: boolean;
   target?: string;
   targetCluster?: string;
+  targetPercentages?: number[];
+
+  // deploy server group model
+  applicationArtifact?: ICloudFoundryArtifact;
+  delayBeforeDisableSec?: number;
+  manifest?: ICloudFoundryManifest;
+  maxRemainingAsgs?: number;
+  startApplication: boolean;
+}
+
+export interface ICloudFoundryArtifact {
+  // one of these two are required
+  artifact?: IArtifact;
+  artifactId?: string;
+}
+
+export interface ICloudFoundryManifest {
+  // one of these three are required
+  direct: ICloudFoundryManifestDirectSource;
+  artifactId?: string;
+  artifact?: IArtifact;
 }
 
 export interface ICloudFoundrySource {
   asgName: string;
   region: string;
   account: string;
+  targetCluster?: string;
 }
-
-export interface ICloudFoundryDestination {
-  region: string;
-  account: string;
-}
-
-export interface ICloudFoundryArtifactSource {
-  type: 'artifact';
-  reference: string;
-  account: string;
-}
-
-export interface ICloudFoundryPackageSource {
-  type: 'package';
-  clusterName: string;
-  serverGroupName: string;
-  account: string;
-  region: string;
-}
-
-export interface ICloudFoundryTriggerSource {
-  type: 'trigger';
-  pattern: string;
-  account: string; // optional: used in the event that retrieving an artifact from a trigger source requires auth
-}
-
-export type ICloudFoundryBinarySource =
-  | ICloudFoundryArtifactSource
-  | ICloudFoundryPackageSource
-  | ICloudFoundryTriggerSource;
 
 export interface ICloudFoundryManifestDirectSource {
-  type: 'direct';
   memory: string;
   diskQuota: string;
   instances: number;
   buildpacks: string[];
-  healthCheckType: string;
-  healthCheckHttpEndpoint: string;
+  healthCheckType?: string;
+  healthCheckHttpEndpoint?: string;
   routes: string[];
   environment: ICloudFoundryEnvVar[];
   services: string[];
 }
 
-export interface ICloudFoundryManifestArtifactSource {
-  type: 'artifact';
-  reference: string;
-  account: string;
-}
-
-export interface ICloudFoundryManifestTriggerSource {
-  type: 'trigger';
-  pattern: string;
-  account: string; // optional: used in the event that retrieving a manifest from a trigger source requires auth
-}
-
-export type ICloudFoundryManifestSource =
-  | ICloudFoundryManifestDirectSource
-  | ICloudFoundryManifestTriggerSource
-  | ICloudFoundryManifestArtifactSource;
-
 export interface ICloudFoundryDeployConfiguration {
   account: string;
   application: string;
-  artifact: ICloudFoundryBinarySource;
+  applicationArtifact: ICloudFoundryArtifact;
   delayBeforeDisableSec?: number;
-  manifest: ICloudFoundryManifestSource;
+  delayBeforeScaleDownSec?: number;
+  freeFormDetails?: string;
+  manifest: ICloudFoundryManifest;
   maxRemainingAsgs?: number;
   region: string;
   rollback?: boolean;
   stack?: string;
-  freeFormDetails?: string;
-  strategy?: string;
   startApplication: boolean;
+  strategy?: string;
+  targetPercentages?: number[];
 }

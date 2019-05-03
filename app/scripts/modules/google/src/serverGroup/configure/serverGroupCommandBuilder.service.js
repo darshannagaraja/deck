@@ -3,8 +3,9 @@
 const angular = require('angular');
 import _ from 'lodash';
 
-import { AccountService, ExpectedArtifactService, INSTANCE_TYPE_SERVICE, NameUtils } from '@spinnaker/core';
+import { AccountService, ExpectedArtifactService, INSTANCE_TYPE_SERVICE } from '@spinnaker/core';
 import { GCEProviderSettings } from 'google/gce.settings';
+import { parseHealthCheckUrl } from 'google/healthCheck/healthCheckUtils';
 
 module.exports = angular
   .module('spinnaker.gce.serverGroupCommandBuilder.service', [
@@ -194,14 +195,18 @@ module.exports = angular
       }
 
       function populateAutoHealingPolicy(serverGroup, command) {
-        if (serverGroup.autoHealingPolicy) {
-          let autoHealingPolicy = serverGroup.autoHealingPolicy;
-          const healthCheckUrl = autoHealingPolicy.healthCheck;
-          const autoHealingPolicyHealthCheck = healthCheckUrl ? _.last(healthCheckUrl.split('/')) : null;
+        const autoHealingPolicy = serverGroup.autoHealingPolicy;
+        if (autoHealingPolicy) {
+          const healthCheckUrl = autoHealingPolicy.healthCheckUrl
+            ? autoHealingPolicy.healthCheckUrl
+            : autoHealingPolicy.healthCheck;
 
-          if (autoHealingPolicyHealthCheck) {
+          if (healthCheckUrl) {
+            const { healthCheckName, healthCheckKind } = parseHealthCheckUrl(healthCheckUrl);
             command.autoHealingPolicy = {
-              healthCheck: healthCheckUrl,
+              healthCheck: healthCheckName,
+              healthCheckKind: healthCheckKind,
+              healthCheckUrl: healthCheckUrl,
               initialDelaySec: autoHealingPolicy.initialDelaySec,
             };
           }
@@ -212,6 +217,12 @@ module.exports = angular
             command.viewState.maxUnavailableMetric = typeof maxUnavailable.percent === 'number' ? 'percent' : 'fixed';
           }
         }
+      }
+
+      function populateShieldedVmConfig(serverGroup, command) {
+        command.enableSecureBoot = serverGroup.enableSecureBoot;
+        command.enableVtpm = serverGroup.enableVtpm;
+        command.enableIntegrityMonitoring = serverGroup.enableIntegrityMonitoring;
       }
 
       function populateCustomMetadata(metadataItems, command) {
@@ -244,6 +255,10 @@ module.exports = angular
             angular.extend(command.instanceMetadata, _.omit(metadataItems, gceServerGroupHiddenMetadataKeys));
           }
         }
+
+        if (command.labels['spinnaker-moniker-sequence']) {
+          delete command.labels['spinnaker-moniker-sequence'];
+        }
       }
 
       function getCustomUserDataKeys(customUserData) {
@@ -273,6 +288,11 @@ module.exports = angular
 
           if (command.labels['spinnaker-server-group']) {
             delete command.labels['spinnaker-server-group'];
+          }
+
+          // Need to delete the sequence, otherwise it won't increment
+          if (command.labels['spinnaker-moniker-sequence']) {
+            delete command.labels['spinnaker-moniker-sequence'];
           }
         }
       }
@@ -333,6 +353,9 @@ module.exports = angular
           instanceMetadata: {},
           tags: [],
           labels: {},
+          enableSecureBoot: false,
+          enableVtpm: false,
+          enableIntegrityMonitoring: false,
           preemptible: false,
           automaticRestart: true,
           onHostMaintenance: 'MIGRATE',
@@ -379,14 +402,14 @@ module.exports = angular
 
       function buildServerGroupCommandFromExisting(application, serverGroup, mode) {
         mode = mode || 'clone';
-        const serverGroupName = NameUtils.parseServerGroupName(serverGroup.name);
+        const moniker = serverGroup.moniker;
 
         const command = {
           application: application.name,
           autoscalingPolicy: _.cloneDeep(serverGroup.autoscalingPolicy),
           strategy: '',
-          stack: serverGroupName.stack,
-          freeFormDetails: serverGroupName.freeFormDetails,
+          stack: moniker.stack,
+          freeFormDetails: moniker.detail,
           credentials: serverGroup.account,
           loadBalancers: extractLoadBalancers(serverGroup.asg),
           loadBalancingPolicy: _.cloneDeep(serverGroup.loadBalancingPolicy),
@@ -408,6 +431,9 @@ module.exports = angular
           tags: [],
           labels: {},
           availabilityZones: [],
+          enableSecureBoot: serverGroup.enableSecureBoot,
+          enableVtpm: serverGroup.enableVtpm,
+          enableIntegrityMonitoring: serverGroup.enableIntegrityMonitoring,
           enableTraffic: true,
           cloudProvider: 'gce',
           selectedProvider: 'gce',
@@ -532,6 +558,7 @@ module.exports = angular
             extendedCommand.instanceMetadata = {};
             populateCustomMetadata(instanceMetadata, extendedCommand);
             populateAutoHealingPolicy(pipelineCluster, extendedCommand);
+            populateShieldedVmConfig(pipelineCluster, extendedCommand);
 
             const instanceTemplateTags = { items: extendedCommand.tags };
             extendedCommand.tags = [];

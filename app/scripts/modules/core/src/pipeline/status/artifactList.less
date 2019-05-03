@@ -1,34 +1,47 @@
-.execution-status-section {
-  ul.trigger-details.artifacts {
-    li {
-      margin-bottom: 4px;
-    }
+@import (reference) '~core/pipeline/executions/execution/execution.less';
 
-    div {
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-      font-size: inherit;
-      height: 18px;
-      line-height: 18px;
-    }
-
-    dl {
-      margin: 0;
-    }
-
-    dd,
-    dt {
-      display: inline;
-    }
-
-    dt {
-      font-weight: normal;
-      padding: 0 4px 0 0;
-    }
-
-    .artifact-icon {
-      padding-right: 4px;
-    }
+.artifact-list {
+  ul {
+    padding: 0;
   }
+
+  li {
+    list-style: none;
+    margin-bottom: 4px;
+  }
+}
+
+.resolved-artifacts {
+  font-size: 0.8em;
+  line-height: 12px;
+  margin-bottom: 10px;
+  padding-left: @execution-parameters-icon-width - 0.2em;
+}
+
+.resolved-artifact-list {
+  display: inline-block;
+  width: 100%;
+  overflow-y: hidden;
+
+  .resolved-artifact-list::after {
+    clear: both;
+    content: '';
+  }
+}
+
+.artifacts-title {
+  margin-top: 5px;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.artifact-list-column {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+
+  width: 50%;
+
+  float: left;
 }

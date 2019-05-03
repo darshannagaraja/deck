@@ -67,7 +67,7 @@
             <ui-select-match>
               <strong>{{$select.selected.value}}</strong>
             </ui-select-match>
-            <ui-select-choices repeat="option.value as option in parameter.options">
+            <ui-select-choices repeat="option.value as option in parameter.options | filter: $select.search">
               <div><strong>{{option.value}}</strong></div>
             </ui-select-choices>
           </ui-select>
@@ -81,6 +81,20 @@
             ng-change="pipelineStageCtrl.updateParam(parameter.name)"
           />Use default
         </label>
+      </div>
+    </div>
+    <div ng-if="invalidParameters.length" class="horizontal center sp-margin-l-top" style="width: 100%">
+      <div class="alert alert-danger vertical">
+        <p>
+          <i class="fa fa-exclamation-triangle"></i>
+          The following parameters are not accepted by the pipeline but are still set in the stage configuration:
+        </p>
+        <ul>
+          <li ng-repeat="paramName in invalidParameters">
+            {{paramName}}
+          </li>
+        </ul>
+        <button class="self-right passive" ng-click="pipelineStageCtrl.removeInvalidParameters()">Remove all</button>
       </div>
     </div>
   </div>

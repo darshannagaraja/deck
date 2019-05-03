@@ -5,7 +5,8 @@ require('jquery-textcomplete');
 
 import './spel.less';
 
-let decorateFn = function($delegate, spelAutocomplete) {
+decorateFn.$inject = ['$delegate', 'spelAutocomplete'];
+function decorateFn($delegate, spelAutocomplete) {
   let directive = $delegate[0];
 
   let link = directive.link.pre;
@@ -31,6 +32,10 @@ let decorateFn = function($delegate, spelAutocomplete) {
       });
 
       function listener(evt) {
+        if ($(evt.target).hasClass('no-doc-link')) {
+          return;
+        }
+
         let hasSpelPrefix = evt.target.value.includes('$');
         let parent = el.parent();
         let hasLink = parent && parent.nextAll && parent.nextAll('.spelLink');
@@ -57,8 +62,7 @@ let decorateFn = function($delegate, spelAutocomplete) {
   };
 
   return $delegate;
-};
-decorateFn.$inject = ['$delegate', 'spelAutocomplete'];
+}
 
 module.exports = angular.module('spinnaker.core.widget.spelText', [require('./spelAutocomplete.service').name]).config([
   '$provide',

@@ -51,8 +51,24 @@ export class RunJobExecutionDetails extends React.Component<
     const { titusUiEndpoint } = this.state;
     const { context } = stage;
     const { cluster } = context;
+    const { resources, env } = cluster;
     const jobId = cluster ? get(context['deploy.jobs'], cluster.region, [])[0] : null;
     const taskId = get(context, 'jobStatus.completionDetails.taskId');
+
+    const renderProperty = (entry: any) => {
+      if (typeof entry === 'object' && !Array.isArray(entry)) {
+        return <pre>{JSON.stringify(entry, null, 2)}</pre>;
+      }
+      const linkPattern = /^https?:\/\/([^\s])*$/;
+      return linkPattern.test(entry) ? (
+        <a href={entry} target="_blank">
+          {entry}
+        </a>
+      ) : (
+        <span>{entry}</span>
+      );
+    };
+
     return (
       <ExecutionDetailsSection name={name} current={current}>
         <div className="row">
@@ -94,9 +110,38 @@ export class RunJobExecutionDetails extends React.Component<
                   </dd>
                 </>
               )}
+              {resources && Object.keys(resources) && (
+                <>
+                  <dt>Resources</dt>
+                  <dd>
+                    <ul className="nostyle">
+                      {Object.keys(resources).map(key => (
+                        <li key={key}>
+                          {key}: {resources[key]}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
+                </>
+              )}
             </dl>
           </div>
         </div>
+        {env && Object.keys(env) && (
+          <div className="row">
+            <div className="col-md-12">
+              <h5 style={{ marginBottom: 0, paddingBottom: '5px' }}>Environment Variables</h5>
+              <dl>
+                {Object.keys(env).map(key => (
+                  <>
+                    <dt>{key}</dt>
+                    <dd>{env[key]}</dd>
+                  </>
+                ))}
+              </dl>
+            </div>
+          </div>
+        )}
         {context.propertyFileContents && (
           <div className="row">
             <div className="col-md-12">
@@ -112,7 +157,7 @@ export class RunJobExecutionDetails extends React.Component<
                   .map(key => (
                     <React.Fragment key={key}>
                       <dt>{key}</dt>
-                      <dd>{context.propertyFileContents[key]}</dd>
+                      <dd>{renderProperty(context.propertyFileContents[key])}</dd>
                     </React.Fragment>
                   ))}
               </dl>
@@ -123,6 +168,7 @@ export class RunJobExecutionDetails extends React.Component<
           stage={stage}
           message={stage.failureMessage || get(context, 'completionDetails.message')}
         />
+
         {taskId && (
           <div className="row">
             <div className="col-md-12">

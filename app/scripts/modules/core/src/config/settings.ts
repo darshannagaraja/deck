@@ -1,5 +1,11 @@
 import { cloneDeep, merge } from 'lodash';
 
+export interface IAdditionalHelpLinks {
+  text: string;
+  url: string;
+  icon?: string;
+}
+
 export interface IProviderSettings {
   defaults: any;
   resetToOriginal?: () => void;
@@ -33,6 +39,8 @@ export interface INotificationSettings {
 
 export interface IFeatures {
   [key: string]: any;
+  artifacts?: boolean;
+  artifactsRewrite?: boolean;
   canary?: boolean;
   chaosMonkey?: boolean;
   displayTimestampsInUserLocalTime?: boolean;
@@ -53,14 +61,18 @@ export interface IFeatures {
   roscoMode?: boolean;
   snapshots?: boolean;
   travis?: boolean;
-  triggerViaEcho?: boolean;
   versionedProviders?: boolean;
   wercker?: boolean;
+  savePipelinesStageEnabled?: boolean;
 }
 
 export interface IDockerInsightSettings {
   enabled: boolean;
   url: string;
+}
+
+export interface INewApplicationDefaults {
+  chaosMonkey?: boolean;
 }
 
 export interface ISpinnakerSettings {
@@ -103,9 +115,11 @@ export interface ISpinnakerSettings {
     text?: string;
     url: string;
   };
+  additionalHelpLinks?: IAdditionalHelpLinks[];
   gateUrl: string;
   gitSources: string[];
   maxPipelineAgeDays: number;
+  newApplicationDefaults: INewApplicationDefaults;
   notifications: INotificationSettings;
   onDemandClusterThreshold: number;
   pagerDuty?: {
