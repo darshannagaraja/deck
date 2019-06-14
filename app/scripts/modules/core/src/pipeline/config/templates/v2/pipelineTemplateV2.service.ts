@@ -1,8 +1,16 @@
 import { hri as HumanReadableIds } from 'human-readable-ids';
 
-import { IPipeline, IPipelineTemplateConfigV2, IPipelineTemplateV2 } from 'core/domain';
+import { IPipeline, IPipelineTemplateConfigV2, IPipelineTemplateV2, ITemplateInheritable } from 'core/domain';
 import { PipelineJSONService } from 'core/pipeline/config/services/pipelineJSON.service';
 import { UUIDGenerator } from 'core/utils';
+import { SETTINGS } from 'core/config';
+
+enum InheritedItem {
+  Triggers = 'triggers',
+  Notifications = 'notifications',
+  ParameterConfig = 'parameterConfig',
+  ExpectedArtifacts = 'expectedArtifacts',
+}
 
 export class PipelineTemplateV2Service {
   public static createPipelineTemplate(pipeline: IPipeline, owner: string): IPipelineTemplateV2 {
@@ -54,5 +62,28 @@ export class PipelineTemplateV2Service {
     return source.startsWith(referencePrefix) ? source : `${referencePrefix}${source}`;
   }
 
+  public static isConfigurable(pipelineConfig: IPipeline): boolean {
+    return SETTINGS.feature.managedPipelineTemplatesV2UI || !this.isV2PipelineConfig(pipelineConfig);
+  }
+
+  public static filterInheritedConfig(pipelineConfig: Partial<IPipeline>) {
+    PipelineTemplateV2Service.inheritedKeys.forEach(key => {
+      if (Array.isArray(pipelineConfig[key])) {
+        const configCollection = pipelineConfig[key];
+        pipelineConfig[key] = (configCollection as ITemplateInheritable[]).filter(
+          item => !item.inherited,
+        ) as typeof configCollection;
+      }
+    });
+    return pipelineConfig;
+  }
+
   private static schema = 'v2';
+
+  public static inheritedKeys: Set<InheritedItem> = new Set([
+    InheritedItem.Triggers,
+    InheritedItem.Notifications,
+    InheritedItem.ParameterConfig,
+    InheritedItem.ExpectedArtifacts,
+  ]);
 }

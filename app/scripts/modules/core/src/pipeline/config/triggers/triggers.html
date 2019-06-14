@@ -59,7 +59,7 @@
         <div class="col-md-12">
           <div class="trigger-config">
             <render-if-feature feature="managedServiceAccounts">
-              <pipeline-roles pipeline="pipeline"></pipeline-roles>
+              <pipeline-roles roles="pipeline.roles" update-roles="updateRoles"></pipeline-roles>
             </render-if-feature>
             <render-if-feature feature="quietPeriod">
               <div class="row">
@@ -102,7 +102,15 @@
     </div>
   </page-section>
   <page-section key="parameters" label="Parameters" no-wrapper="true" badge="pipeline.parameterConfig.length">
-    <parameters pipeline="pipeline"></parameters>
+    <parameters
+      add-parameter="addParameter"
+      parameters="pipeline.parameterConfig"
+      pipeline-name="pipeline.name"
+      remove-parameter="removeParameter"
+      update-parameter="updateParameter"
+      update-all-parameters="updateAllParameters"
+    >
+    </parameters>
   </page-section>
   <page-section
     key="notifications"

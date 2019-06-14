@@ -1,10 +1,11 @@
 import { IPromise, module } from 'angular';
-import { chain, flatten, intersection, xor } from 'lodash';
+import { chain, flatten, intersection, xor, cloneDeep } from 'lodash';
 import { $q } from 'ngimport';
 import { Subject } from 'rxjs';
 
 import {
   AccountService,
+  Application,
   IServerGroupCommand,
   IServerGroupCommandViewState,
   IDeploymentStrategy,
@@ -27,6 +28,8 @@ import {
   VpcReader,
 } from '@spinnaker/amazon';
 
+import { IJobDisruptionBudget } from 'titus/domain';
+
 export interface ITitusServerGroupCommandBackingData extends IServerGroupCommandBackingData {
   accounts: string[];
   vpcs: IVpc[];
@@ -39,9 +42,35 @@ export interface ITitusServerGroupCommandViewState extends IServerGroupCommandVi
   dirty: IAmazonServerGroupCommandDirty;
 }
 
-export type Constraint = 'ExclusiveHost' | 'UniqueHost' | 'ZoneBalance';
+export const defaultJobDisruptionBudget: IJobDisruptionBudget = {
+  availabilityPercentageLimit: {
+    percentageOfHealthyContainers: 95,
+  },
+  ratePercentagePerInterval: {
+    intervalMs: 600000,
+    percentageLimitPerInterval: 5,
+  },
+  containerHealthProviders: [{ name: 'eureka' }],
+  timeWindows: [
+    {
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      hourlyTimeWindows: [{ startHour: 10, endHour: 16 }],
+      timeZone: 'PST',
+    },
+  ],
+};
+
+export const getDefaultJobDisruptionBudgetForApp = (application: Application): IJobDisruptionBudget => {
+  const budget = cloneDeep(defaultJobDisruptionBudget);
+  if (application.attributes && application.attributes.platformHealthOnly) {
+    budget.containerHealthProviders = [];
+  }
+  return budget;
+};
+
 export interface ITitusServerGroupCommand extends IServerGroupCommand {
   cluster?: ICluster;
+  disruptionBudget?: IJobDisruptionBudget;
   deferredInitialization?: boolean;
   registry: string;
   imageId: string;
@@ -74,8 +103,10 @@ export interface ITitusServerGroupCommand extends IServerGroupCommand {
   migrationPolicy: {
     type: string;
   };
-  softConstraints: Constraint[];
-  hardConstraints: Constraint[];
+  constraints: {
+    hard: { [key: string]: string };
+    soft: { [key: string]: string };
+  };
 }
 
 export class TitusServerGroupConfigurationService {

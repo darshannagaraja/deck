@@ -1,4 +1,4 @@
-import { chain, compact, find, flattenDeep, forOwn, get, groupBy, includes, uniq } from 'lodash';
+import { chain, compact, find, forOwn, get, groupBy, includes, uniq } from 'lodash';
 import { Debounce } from 'lodash-decorators';
 import { Subject } from 'rxjs';
 import { $log } from 'ngimport';
@@ -174,31 +174,25 @@ export class ExecutionFilterService {
   private static addEmptyPipelines(groups: IExecutionGroup[], application: Application): void {
     const configs = (application.pipelineConfigs.data || []).concat(application.strategyConfigs.data || []);
     const sortFilter: ISortFilter = ExecutionState.filterModel.asFilterModel.sortFilter;
+    let toAdd = [];
     if (!this.isFilterable(sortFilter.pipeline) && !this.isFilterable(sortFilter.status) && !sortFilter.filter) {
-      configs
-        .filter((config: any) => !groups[config.name])
-        .forEach((config: any) =>
-          groups.push({
-            heading: config.name,
-            config,
-            executions: [],
-            targetAccounts: this.extractAccounts(config),
-            fromTemplate: (config && config.type === 'templatedPipeline') || false,
-          }),
-        );
+      toAdd = configs.filter((config: any) => !groups[config.name]);
     } else {
-      configs
-        .filter((config: any) => !groups[config.name] && sortFilter.pipeline[config.name])
-        .forEach((config: any) => {
-          groups.push({
-            heading: config.name,
-            config,
-            executions: [],
-            targetAccounts: this.extractAccounts(config),
-            fromTemplate: (config && config.type === 'templatedPipeline') || false,
-          });
-        });
+      toAdd = configs.filter((config: any) => {
+        const filterMatches = (sortFilter.filter || '').toLowerCase().includes(config.name.toLowerCase());
+        return !groups[config.name] && (sortFilter.pipeline[config.name] || filterMatches);
+      });
     }
+
+    toAdd.forEach((config: any) => {
+      groups.push({
+        heading: config.name,
+        config,
+        executions: [],
+        targetAccounts: this.extractAccounts(config),
+        fromTemplate: (config && config.type === 'templatedPipeline') || false,
+      });
+    });
   }
 
   private static extractAccounts(config: IPipeline): string[] {
@@ -212,7 +206,7 @@ export class ExecutionFilterService {
         configAccounts.push(...stageConfig.configAccountExtractor(stage));
       }
     });
-    return uniq(compact(flattenDeep(configAccounts))).filter(a => !a.includes('${')); // exclude parameterized accounts
+    return uniq(compact(configAccounts)).filter(a => !a.includes('${')); // exclude parameterized accounts
   }
 
   private static fixName(execution: IExecution, application: Application): void {

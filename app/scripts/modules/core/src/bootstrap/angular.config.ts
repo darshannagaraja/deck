@@ -24,7 +24,7 @@ bootstrapModule.config([
 bootstrapModule.config([
   '$compileProvider',
   ($compileProvider: ICompileProvider) => {
-    $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|mailto|hipchat|slack|ssh):/);
+    $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|mailto|slack|ssh):/);
     $compileProvider.preAssignBindingsEnabled(true);
   },
 ]);
@@ -35,5 +35,6 @@ bootstrapModule.config([
   '$locationProvider',
   ($locationProvider: ILocationProvider) => {
     $locationProvider.hashPrefix('');
+    $locationProvider.html5Mode({ enabled: false, rewriteLinks: false });
   },
 ]);

@@ -12,10 +12,11 @@ import {
 import {
   ApplicationManagerSection,
   BoundServicesSection,
+  BuildSection,
   cfServerGroupDetailsGetter,
   CloudFoundryCreateServerGroupModal,
   CloudFoundryServerGroupActions,
-  CloudFoundryServerGroupCommandBuilder,
+  CloudFoundryServerGroupCommandBuilderShim,
   CloudFoundryServerGroupTransformer,
   EvironmentVariablesSection,
   HealthCheckSection,
@@ -66,12 +67,13 @@ CloudProviderRegistry.registerProvider('cloudfoundry', {
       MetricsSection,
       ServerGroupSizingSection,
       HealthCheckSection,
+      BuildSection,
       PackageSection,
       BoundServicesSection,
       EvironmentVariablesSection,
     ],
     CloneServerGroupModal: CloudFoundryCreateServerGroupModal,
-    commandBuilder: CloudFoundryServerGroupCommandBuilder,
+    commandBuilder: CloudFoundryServerGroupCommandBuilderShim,
     scalingActivitiesEnabled: false, // FIXME enable?
   },
   instance: {

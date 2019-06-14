@@ -111,7 +111,7 @@ export class ConfigurePipelineTemplateModalV2Controller implements IController {
 
     return PipelineTemplateReader.getPipelinePlan(config)
       .then(plan => {
-        const { parameterConfig, notifications, triggers } = plan;
+        const { parameterConfig, notifications, triggers, expectedArtifacts } = plan;
         const { inheritTemplateParameters, inheritTemplateNotifications, inheritTemplateTriggers } = this.state;
 
         const configWithInheritedValues = {
@@ -119,6 +119,7 @@ export class ConfigurePipelineTemplateModalV2Controller implements IController {
           ...(inheritTemplateParameters && parameterConfig ? { parameterConfig } : {}),
           ...(inheritTemplateNotifications && notifications ? { notifications } : {}),
           ...(inheritTemplateTriggers && triggers ? { triggers } : {}),
+          ...(expectedArtifacts ? { expectedArtifacts } : {}),
         };
 
         this.$uibModalInstance.close({ plan, config: configWithInheritedValues });
@@ -148,7 +149,8 @@ export class ConfigurePipelineTemplateModalV2Controller implements IController {
     ];
 
     return {
-      ...(pipelineTemplateConfig || {}),
+      ...PipelineTemplateV2Service.filterInheritedConfig(pipelineTemplateConfig),
+      type: 'templatedPipeline',
       name: pipelineName,
       application: appName,
       variables: this.transformVariablesForPipelinePlan(),
